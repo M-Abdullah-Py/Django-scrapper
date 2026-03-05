@@ -1,6 +1,7 @@
+
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize particles.js
-    particlesJS.load('particles-js', '{% static "js/particles.json" %}', function() {
+    particlesJS.load('particles-js', 'static/js/particles.json', function() {
         console.log('Particles loaded');
     });
     
@@ -37,6 +38,21 @@ document.addEventListener('DOMContentLoaded', function() {
     
     let currentCsvUrl = '';
     let startTime;
+    let allProducts = [];
+    let currentPage = 1;
+    const productsPerPage = 10;
+    
+    // Setup download button listener
+    downloadBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log('Download button clicked, URL:', currentCsvUrl);
+        if (currentCsvUrl) {
+            window.location.href = currentCsvUrl;
+        } else {
+            showNotification('No CSV file available. Please scrape first.', 'warning');
+        }
+    });
     
     // Popular suggestions click
     document.querySelectorAll('.suggestions a').forEach(link => {
@@ -87,15 +103,16 @@ document.addEventListener('DOMContentLoaded', function() {
             const timeInSeconds = ((endTime - startTime) / 1000).toFixed(1);
             
             if (data.success) {
-                displayProducts(data.products);
+                allProducts = data.products;
+                currentPage = 1;
+                displayProducts(allProducts);
                 productCount.textContent = `${data.total} products`;
                 totalProducts.textContent = data.total;
                 scrapeTime.textContent = `${timeInSeconds}s`;
                 currentCsvUrl = data.csv_url;
-                downloadBtn.href = currentCsvUrl;
                 resultsCard.classList.remove('d-none');
                 resultsCard.classList.add('animate__fadeInUp');
-                
+                setupPagination(data.total);
                 showNotification(`Successfully scraped ${data.total} products!`, 'success');
             } else {
                 showNotification('Error: ' + data.message, 'error');
@@ -124,7 +141,12 @@ document.addEventListener('DOMContentLoaded', function() {
     function displayProducts(products) {
         tableBody.innerHTML = '';
         
-        products.forEach((product, index) => {
+        // Calculate pagination
+        const startIndex = (currentPage - 1) * productsPerPage;
+        const endIndex = Math.min(startIndex + productsPerPage, products.length);
+        const paginatedProducts = products.slice(startIndex, endIndex);
+        
+        paginatedProducts.forEach((product, index) => {
             const row = document.createElement('tr');
             row.style.animation = `fadeInUp 0.5s ease ${index * 0.1}s both`;
             
@@ -133,10 +155,12 @@ document.addEventListener('DOMContentLoaded', function() {
             const stars = getStarRating(ratingValue);
             
             row.innerHTML = `
-                <td><span class="fw-bold text-primary">#${index + 1}</span></td>
+                <td><span class="fw-bold text-primary">#${startIndex + index + 1}</span></td>
                 <td>
                     <div class="product-title">
-                        <span class="title-text">${product.title || 'N/A'}</span>
+                        <a href="${product.link || '#'}" target="_blank" class="title-link text-decoration-none text-primary fw-500">
+                            ${product.title || 'N/A'}
+                        </a>
                         <small class="asin text-muted d-block mt-1">${product.asin || ''}</small>
                     </div>
                 </td>
@@ -165,7 +189,78 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         
         // Update showing info
-        document.getElementById('showingEnd').textContent = Math.min(10, products.length);
+        document.getElementById('showingStart').textContent = startIndex + 1;
+        document.getElementById('showingEnd').textContent = endIndex;
+    }
+    
+    // Setup pagination
+    function setupPagination(totalProducts) {
+        const totalPages = Math.ceil(totalProducts / productsPerPage);
+        const pageButtons = document.querySelectorAll('.page-btn');
+        const prevBtn = pageButtons[0];
+        const nextBtn = pageButtons[pageButtons.length - 1];
+        
+        pageButtons.forEach((btn, index) => {
+            btn.removeEventListener('click', btn.clickHandler);
+            
+            btn.clickHandler = function(e) {
+                e.preventDefault();
+                
+                // Detect button type by position or content
+                if (index === 0) {
+                    // Previous button
+                    if (currentPage > 1) {
+                        currentPage--;
+                        displayProducts(allProducts);
+                        updatePaginationState(totalPages, pageButtons);
+                    }
+                } else if (index === pageButtons.length - 1) {
+                    // Next button
+                    if (currentPage < totalPages) {
+                        currentPage++;
+                        displayProducts(allProducts);
+                        updatePaginationState(totalPages, pageButtons);
+                    }
+                } else {
+                    // Page number button
+                    const pageNum = parseInt(btn.textContent.trim());
+                    if (!isNaN(pageNum) && pageNum <= totalPages) {
+                        currentPage = pageNum;
+                        displayProducts(allProducts);
+                        updatePaginationState(totalPages, pageButtons);
+                    }
+                }
+            };
+            
+            btn.addEventListener('click', btn.clickHandler);
+        });
+        
+        // Set initial state
+        updatePaginationState(totalPages, pageButtons);
+    }
+    
+    // Update pagination button states
+    function updatePaginationState(totalPages, pageButtons) {
+        const prevBtn = pageButtons[0];
+        const nextBtn = pageButtons[pageButtons.length - 1];
+        
+        // Disable/enable prev button
+        prevBtn.disabled = currentPage === 1;
+        
+        // Disable/enable next button
+        nextBtn.disabled = currentPage >= totalPages;
+        
+        // Update active page number button
+        pageButtons.forEach(btn => {
+            const pageNum = parseInt(btn.textContent.trim());
+            if (!isNaN(pageNum)) {
+                if (pageNum === currentPage) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            }
+        });
     }
     
     // Helper function for star ratings

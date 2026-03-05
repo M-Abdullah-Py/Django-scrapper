@@ -474,6 +474,19 @@ body {
     color: var(--text-dark);
 }
 
+.product-title .title-link {
+    font-weight: 600;
+    color: var(--primary);
+    transition: all 0.3s ease;
+    display: inline-block;
+}
+
+.product-title .title-link:hover {
+    color: var(--primary-dark);
+    text-decoration: underline !important;
+    transform: translateX(2px);
+}
+
 .product-title .asin {
     font-size: 0.85rem;
     color: var(--gray);

@@ -5,8 +5,11 @@ import time
 from bs4 import BeautifulSoup
 from selenium.webdriver.common.by import By
 import pandas as pd 
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 
-def fetch_html(url, save_path="page.html"):
+def fetch_html(url, query,save_path="page.html"):
     
     chrome_options = Options()
     chrome_options.add_argument("--start-maximized")
@@ -18,7 +21,14 @@ def fetch_html(url, save_path="page.html"):
         driver.get(url)
         
         # wait for JS to load
-        time.sleep(10)
+        # time.sleep(10)
+
+        search_bar = WebDriverWait(driver, 10).until(
+        EC.presence_of_element_located((By.ID, "twotabsearchtextbox"))
+        )
+        
+        search_bar.send_keys(query)
+        search_bar.send_keys(Keys.RETURN)
 
         element = driver.find_element(By.XPATH, "//span[@data-component-type='s-search-results' and @class='rush-component s-latency-cf-section']")
 
@@ -56,6 +66,10 @@ def parse_products(html_file="amazon.html"):
             else:
                 clean_title = None
             
+            parent_link = title_elem.find_parent("a")
+            product_link = parent_link["href"]
+            product_link = f"https://amazon.com{product_link}"
+            
             review_element = product.select_one("div[data-cy='reviews-block']")
             if review_element:
                 rating = review_element.select_one("div.a-row.a-size-small span").get_text()
@@ -88,7 +102,7 @@ def parse_products(html_file="amazon.html"):
                     
                     # Store both original and cleaned price
                     price_numeric = price
-                    price_display = f"${price:,.2f}" if price else None  # Always show in USD for display
+                    price_display = f"{price:,.2f}" if price else None  # Always show in USD for display
                     
                 else:
                     price_numeric = None
@@ -118,10 +132,12 @@ def parse_products(html_file="amazon.html"):
                 'rating': rating,
                 'sold': sold,
                 'price': price_numeric,  # Numeric for calculations
-                'price_display': price_display  
+                'price_display': price_display,
+                'Link':product_link  
             })
             
             print(f"Title: {clean_title[:50]}...")
+            print(f"link: {product_link}"),
             print(f"Rating: {rating}, Sold: {sold}, Price: {price}")
             print("-" * 30)
             
@@ -154,10 +170,10 @@ def save_to_csv(products, filename="amazon_products.csv"):
 
 if __name__ == "__main__":
     query = "laptops"
-    url = f"https://www.amazon.com/s?k={query}"
+    url = f"https://www.amazon.com/"
     
     # Uncomment to fetch fresh HTML
-    # fetch_html(url, "amazon.html")
+    fetch_html(url, query, "amazon.html" )
     
     # Parse products
     Products = parse_products("amazon.html")
