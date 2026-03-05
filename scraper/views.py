@@ -82,6 +82,9 @@ def scrape_amazon(request):
             from django.conf import settings
             csv_path = os.path.join(settings.MEDIA_ROOT, csv_filename)
             
+            # Clean up old CSV files regularly (optional)
+            # cleanup_old_files(days_old=2)
+            
             print(f"Saving CSV to: {csv_path}")
             
             # Run scraper
@@ -94,6 +97,14 @@ def scrape_amazon(request):
             fetch_html(url, query, html_path)
             # Parse products
             products = parse_products(html_path)
+            
+            # delete temporary html file to save space
+            try:
+                if os.path.exists(html_path):
+                    os.remove(html_path)
+                    print(f"Removed temporary HTML: {html_path}")
+            except Exception as ex:
+                print(f"Failed to delete html file: {ex}")
             
             if products:
                 # Save to CSV
@@ -108,7 +119,8 @@ def scrape_amazon(request):
                         'title': p['title'],
                         'rating': p['rating'],
                         'sold': p['sold'],
-                        'price': p.get('price_display') or (f"${p['price']:,.2f}" if p.get('price') else 'N/A'),
+                        # treat 0 as valid price
+                        'price': p.get('price_display') or (f"${p['price']:,.2f}" if p.get('price') is not None else 'N/A'),
                         'link': p.get('Link', '#')  # Include the product link
                     })
                 
@@ -116,6 +128,8 @@ def scrape_amazon(request):
                 request_url = request.build_absolute_uri('/')[:-1]
                 csv_full_url = f"{request_url}/media/{csv_filename}"
                 
+                
+
                 return JsonResponse({
                     'success': True,
                     'products': display_products,

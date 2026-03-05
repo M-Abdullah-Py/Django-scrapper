@@ -62,6 +62,9 @@ def parse_products(html_file="amazon.html"):
 
     for product in product_containers:
         try:  # 👈 Add try-except for error handling
+            # reset price variables to avoid stale data
+            price = None
+            price_numeric = None
             title_elem = product.select_one("h2 span")
             if title_elem:
                 clean_title = ' '.join(title_elem.text.split())
@@ -96,8 +99,8 @@ def parse_products(html_file="amazon.html"):
                     clean_price = raw_price.replace('PKR', '').replace('Â', '').replace('$', '').replace('₹', '').replace('£', '').replace(',', '').strip()
                     
                     # Remove any other non-numeric characters except decimal point
-                    import re
-                    clean_price = re.sub(r'[^\d.]', '', clean_price)
+                    # import re
+                    # clean_price = re.sub(r'[^\d.]', '', clean_price)
                     
                     # Convert to float
                     price = float(clean_price) if clean_price else None
@@ -139,8 +142,8 @@ def parse_products(html_file="amazon.html"):
             })
             
             print(f"Title: {clean_title[:50]}...")
-            print(f"link: {product_link}"),
-            print(f"Rating: {rating}, Sold: {sold}, Price: {price}")
+            print(f"link: {product_link}")
+            print(f"Rating: {rating}, Sold: {sold}, Price: {price_numeric}, Price real:{price}")
             print("-" * 30)
             
         except Exception as e:
