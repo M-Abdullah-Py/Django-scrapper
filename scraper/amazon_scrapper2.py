@@ -9,43 +9,69 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
-def fetch_html(url, query,save_path="page.html"):
+# def fetch_html(url, query,save_path="page.html"):
     
-    chrome_options = Options()
-    chrome_options.add_argument("--headless=new") 
-    # chrome_options.add_argument("--start-maximized")
-    chrome_options.add_argument("--window-size=1920,1080")
-    chrome_options.add_argument("--disable-blink-features=AutomationControlled")
+#     chrome_options = Options()
+#     chrome_options.add_argument("--headless=new") 
+#     # chrome_options.add_argument("--start-maximized")
+#     chrome_options.add_argument("--window-size=1920,1080")
+#     chrome_options.add_argument("--disable-blink-features=AutomationControlled")
     
-    driver = webdriver.Chrome(options=chrome_options)
+#     driver = webdriver.Chrome(options=chrome_options)
     
-    try:
-        driver.get(url)
+#     try:
+#         driver.get(url)
         
-        # wait for JS to load
-        # time.sleep(10)
+#         # wait for JS to load
+#         # time.sleep(10)
 
-        search_bar = WebDriverWait(driver, 10).until(
-        EC.presence_of_element_located((By.ID, "twotabsearchtextbox"))
-        )
+#         search_bar = WebDriverWait(driver, 10).until(
+#         EC.presence_of_element_located((By.ID, "twotabsearchtextbox"))
+#         )
         
-        search_bar.send_keys(query)
-        search_bar.send_keys(Keys.RETURN)
+#         search_bar.send_keys(query)
+#         search_bar.send_keys(Keys.RETURN)
 
-        element = driver.find_element(By.XPATH, "//span[@data-component-type='s-search-results' and @class='rush-component s-latency-cf-section']")
+#         element = driver.find_element(By.XPATH, "//span[@data-component-type='s-search-results' and @class='rush-component s-latency-cf-section']")
 
-        html = element.get_attribute("outerHTML")
+#         html = element.get_attribute("outerHTML")
 
-        print(html)      
-        # Save HTML
-        with open(save_path, "w", encoding="utf-8") as f:
-            f.write(html)
+#         print(html)      
+#         # Save HTML
+#         with open(save_path, "w", encoding="utf-8") as f:
+#             f.write(html)
         
-        print("HTML saved successfully!")
+#         print("HTML saved successfully!")
     
-    finally:
-        driver.quit()
+#     finally:
+#         driver.quit()
 
+
+import requests
+from bs4 import BeautifulSoup
+from fake_useragent import UserAgent
+
+def fetch_html(url ,query, save_path="page.html"):
+    ua = UserAgent()
+    headers = {
+        'User-Agent': ua.random,
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Referer': 'https://www.amazon.com/',
+    }
+    
+    search_url = f"https://www.amazon.com/s?k={query.replace(' ', '+')}"
+    
+    response = requests.get(search_url, headers=headers, timeout=30)
+    
+    with open(save_path, "w", encoding="utf-8") as f:
+        f.write(response.text)
+    
+    print(f"HTML saved! Status: {response.status_code}")
+    # print(f"HTML saved! Status: {response.text}")
+
+# fetch_html(query="laptops")
 
 def parse_products(html_file="amazon.html"):
         
@@ -77,13 +103,21 @@ def parse_products(html_file="amazon.html"):
             
             review_element = product.select_one("div[data-cy='reviews-block']")
             if review_element:
-                rating = review_element.select_one("div.a-row.a-size-small span").get_text()
-                sold_elem = review_element.select_one("div.a-size-base")
+                # rating = review_element.select_one("div.a-row.a-size-small span").get_text()
+                # rating_elem = product.select_one("div.a-row.a-size-small span")
+                rating_elem = product.select_one("i[data-cy=reviews-ratings-slot] span")
+                rating = rating_elem.get_text(strip=True) if rating_elem else None
+                if rating and "out" in rating:
+                    rating = rating.split(" ")[0]
+                    print(rating)
+                rows = product.select("div.a-row")
+                sold_elem = rows[-1].select_one("span.a-color-secondary")
+                # sold_elem = review_element.select_one("div.a-row:nth-of-type(2) span.a-color-secondary")
                 sold = sold_elem.text if sold_elem else None
             else:
                 rating = None
                 sold = None
-            price_element = product.select_one("div.puisg-row")
+            price_element = product.select_one("div[data-cy='price-recipe']")
             if price_element:
                 price_elem = price_element.select_one("span.a-price > span.a-offscreen")
                 if price_elem:
@@ -136,7 +170,7 @@ def parse_products(html_file="amazon.html"):
                 'title': clean_title,
                 'rating': rating,
                 'sold': sold,
-                'price': price_numeric,  # Numeric for calculations
+                # 'price': price_numeric,  # Numeric for calculations
                 'price_display': price_display,
                 'Link':product_link  
             })
@@ -174,14 +208,15 @@ def save_to_csv(products, filename="amazon_products.csv"):
     return df
 
 if __name__ == "__main__":
-    query = "laptops"
+    # query = "smartphones"
+    query = input("Query: ")
     url = f"https://www.amazon.com/"
     
     # Uncomment to fetch fresh HTML
-    fetch_html(url, query, "amazon.html" )
+    # fetch_html(url, query, f"{query.replace(" ", "_")}.html" )
     
     # Parse products
-    Products = parse_products("amazon.html")
+    Products = parse_products(f"{query.replace(" ", "_")}.html")
     print(f"\n✅ Total products scraped: {len(Products)}")
     
     # Save to CSV using pandas

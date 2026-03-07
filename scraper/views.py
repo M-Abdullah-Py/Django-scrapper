@@ -9,6 +9,7 @@ import json
 import os
 import pandas as pd
 from scraper.amazon_scrapper2 import fetch_html, parse_products  # Import your functions
+# from scraper.python_Test import fetch_html  # Import your functions
 
 from django.http import FileResponse
 
