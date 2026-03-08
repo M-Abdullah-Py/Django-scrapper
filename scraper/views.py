@@ -119,7 +119,8 @@ def scrape_amazon(request):
                     display_products.append({
                         'title': p['title'],
                         'rating': p['rating'],
-                        'sold': p['sold'],
+                        'total_ratings': p['total_ratings'],
+                        # 'sold': p['sold'],
                         # treat 0 as valid price
                         'price': p.get('price_display') or (f"${p['price']:,.2f}" if p.get('price') is not None else 'N/A'),
                         'link': p.get('Link', '#')  # Include the product link

@@ -175,7 +175,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <td>
                     <span class="sold-info">
                         <i class="bi bi-cart-check text-success"></i>
-                        ${product.sold || 'N/A'}
+                        ${product.total_ratings || 'N/A'}
                     </span>
                 </td>
                 <td>

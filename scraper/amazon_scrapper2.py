@@ -72,6 +72,7 @@ def fetch_html(url ,query, save_path="page.html"):
     # print(f"HTML saved! Status: {response.text}")
 
 # fetch_html(query="laptops")
+import re
 
 def parse_products(html_file="amazon.html"):
         
@@ -110,11 +111,28 @@ def parse_products(html_file="amazon.html"):
                 if rating and "out" in rating:
                     rating = rating.split(" ")[0]
                     print(rating)
+
+
+                # total_ratings_block = product.select_one("span.rush-component[data-component-type='s-client-side-analytics'] span")
+                # print(total_ratings_block)
+                # total_ratings = total_ratings_block.get_text() if total_ratings_block else None   
+                # if total_ratings:
+                #     total_ratings = total_ratings.strip("()")
+                #     print(total_ratings)
+                anchor = review_element.find("a")
+                ratings_match = re.search(r"\(([^)]+)\)", anchor.get_text(strip=True))
+                total_ratings = ratings_match.group(1) if ratings_match else None
+                print(total_ratings)
+              
+                
+                
                 rows = product.select("div.a-row")
                 sold_elem = rows[-1].select_one("span.a-color-secondary")
                 # sold_elem = review_element.select_one("div.a-row:nth-of-type(2) span.a-color-secondary")
                 sold = sold_elem.text if sold_elem else None
+
             else:
+                total_ratings = None
                 rating = None
                 sold = None
             price_element = product.select_one("div[data-cy='price-recipe']")
@@ -169,7 +187,8 @@ def parse_products(html_file="amazon.html"):
             Products.append({
                 'title': clean_title,
                 'rating': rating,
-                'sold': sold,
+                # 'sold': sold,
+                'total_ratings':total_ratings,
                 # 'price': price_numeric,  # Numeric for calculations
                 'price_display': price_display,
                 'Link':product_link  
@@ -177,7 +196,7 @@ def parse_products(html_file="amazon.html"):
             
             print(f"Title: {clean_title[:50]}...")
             print(f"link: {product_link}")
-            print(f"Rating: {rating}, Sold: {sold}, Price: {price_numeric}, Price real:{price}")
+            print(f"Rating: {rating}, Sold: {sold}, Total Ratings:{total_ratings}, Price: {price_numeric}, Price real:{price}")
             print("-" * 30)
             
         except Exception as e:
@@ -219,12 +238,12 @@ if __name__ == "__main__":
     Products = parse_products(f"{query.replace(" ", "_")}.html")
     print(f"\n✅ Total products scraped: {len(Products)}")
     
-    # Save to CSV using pandas
-    if Products:
-        df = save_to_csv(Products, "amazon_laptops.csv")
+    # # Save to CSV using pandas
+    # if Products:
+    #     df = save_to_csv(Products, "amazon_laptops.csv")
         
-        # Optional: Do some analysis
-        print(f"\n📈 Price Statistics:")
-        print(df['price'].describe())
-    else:
-        print("❌ No products found to save!")
+    #     # Optional: Do some analysis
+    #     print(f"\n📈 Price Statistics:")
+    #     print(df['price_display'].describe())
+    # else:
+    #     print("❌ No products found to save!")
