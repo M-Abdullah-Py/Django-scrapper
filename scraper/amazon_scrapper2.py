@@ -51,25 +51,81 @@ import requests
 from bs4 import BeautifulSoup
 from fake_useragent import UserAgent
 
-def fetch_html(url ,query, save_path="page.html"):
-    ua = UserAgent()
+# def fetch_html(url ,query, save_path="page.html"):
+#     ua = UserAgent()
+#     headers = {
+#         'User-Agent': ua.random,
+#         'Accept-Language': 'en-US,en;q=0.9',
+#         'Accept-Encoding': 'gzip, deflate, br',
+#         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+#         'Referer': 'https://www.amazon.com/',
+#     }
+    
+#     search_url = f"https://www.amazon.com/s?k={query.replace(' ', '+')}"
+    
+#     response = requests.get(search_url, headers=headers, timeout=30)
+    
+#     with open(save_path, "w", encoding="utf-8") as f:
+#         f.write(response.text)
+    
+#     print(f"HTML saved! Status: {response.status_code}")
+#     # print(f"HTML saved! Status: {response.text}")
+
+
+import time
+import random
+
+USER_AGENTS = [
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2.1 Safari/605.1.15",
+    "Mozilla/5.0 (X11; Linux x86_64; rv:123.0) Gecko/20100101 Firefox/123.0",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:123.0) Gecko/20100101 Firefox/123.0",
+]
+
+def fetch_html(url, query, save_path="page.html"):
+    session = requests.Session()
+
     headers = {
-        'User-Agent': ua.random,
+        'User-Agent': random.choice(USER_AGENTS),
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
         'Accept-Language': 'en-US,en;q=0.9',
         'Accept-Encoding': 'gzip, deflate, br',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Referer': 'https://www.amazon.com/',
+        'DNT': '1',
+        'Connection': 'keep-alive',
+        'Upgrade-Insecure-Requests': '1',
+        'Sec-Fetch-Dest': 'document',
+        'Sec-Fetch-Mode': 'navigate',
+        'Sec-Fetch-Site': 'none',
+        'Sec-Fetch-User': '?1',
+        'Cache-Control': 'max-age=0',
+        'Referer': 'https://www.google.com/',
     }
-    
+
+    # Visit homepage first to get real cookies
+    try:
+        session.get("https://www.amazon.com/", headers=headers, timeout=15)
+        time.sleep(random.uniform(1.5, 3.0))
+    except Exception:
+        pass
+
     search_url = f"https://www.amazon.com/s?k={query.replace(' ', '+')}"
-    
-    response = requests.get(search_url, headers=headers, timeout=30)
-    
+    response = session.get(search_url, headers=headers, timeout=30)
+
+    blocked = (
+        response.status_code != 200
+        or "<title>Sorry" in response.text[:500]
+        or "api-services-support@amazon.com" in response.text[:1000]
+    )
+
+    if blocked:
+        print(f"❌ Blocked by Amazon (status={response.status_code}). Consider using ScraperAPI.")
+        return False
+
     with open(save_path, "w", encoding="utf-8") as f:
         f.write(response.text)
-    
-    print(f"HTML saved! Status: {response.status_code}")
-    # print(f"HTML saved! Status: {response.text}")
+
+    print(f"✅ HTML saved! Status: {response.status_code}")
+    return True
 
 # fetch_html(query="laptops")
 import re
@@ -232,7 +288,7 @@ if __name__ == "__main__":
     url = f"https://www.amazon.com/"
     
     # Uncomment to fetch fresh HTML
-    # fetch_html(url, query, f"{query.replace(" ", "_")}.html" )
+    fetch_html(url, query, f"{query.replace(" ", "_")}.html" )
     
     # Parse products
     Products = parse_products(f"{query.replace(" ", "_")}.html")
