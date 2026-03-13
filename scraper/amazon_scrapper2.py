@@ -49,28 +49,6 @@ from selenium.webdriver.support import expected_conditions as EC
 
 import requests
 from bs4 import BeautifulSoup
-from fake_useragent import UserAgent
-
-# def fetch_html(url ,query, save_path="page.html"):
-#     ua = UserAgent()
-#     headers = {
-#         'User-Agent': ua.random,
-#         'Accept-Language': 'en-US,en;q=0.9',
-#         'Accept-Encoding': 'gzip, deflate, br',
-#         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-#         'Referer': 'https://www.amazon.com/',
-#     }
-    
-#     search_url = f"https://www.amazon.com/s?k={query.replace(' ', '+')}"
-    
-#     response = requests.get(search_url, headers=headers, timeout=30)
-    
-#     with open(save_path, "w", encoding="utf-8") as f:
-#         f.write(response.text)
-    
-#     print(f"HTML saved! Status: {response.status_code}")
-#     # print(f"HTML saved! Status: {response.text}")
-
 
 import time
 import random
@@ -130,7 +108,7 @@ def fetch_html(url, query, save_path="page.html"):
 # fetch_html(query="laptops")
 import re
 
-def parse_products(html_file="amazon.html"):
+def parse_products(html_file="page.html"):
         
     with open(html_file, "r", encoding="utf-8") as f:
         html = f.read()
@@ -167,19 +145,15 @@ def parse_products(html_file="amazon.html"):
                 if rating and "out" in rating:
                     rating = rating.split(" ")[0]
                     print(rating)
-
-
-                # total_ratings_block = product.select_one("span.rush-component[data-component-type='s-client-side-analytics'] span")
-                # print(total_ratings_block)
-                # total_ratings = total_ratings_block.get_text() if total_ratings_block else None   
-                # if total_ratings:
-                #     total_ratings = total_ratings.strip("()")
-                #     print(total_ratings)
-                anchor = review_element.find("a")
-                ratings_match = re.search(r"\(([^)]+)\)", anchor.get_text(strip=True))
-                total_ratings = ratings_match.group(1) if ratings_match else None
-                print(total_ratings)
-              
+                
+                total_ratings = None
+                all_anchors = review_element.find_all("a")
+                for a in all_anchors:
+                    text = a.get_text(strip=True)
+                    if "(" in text and ")" in text and "out of" not in text:
+                        ratings_match = re.search(r"\(([^)]+)\)", text)
+                        total_ratings = ratings_match.group(1) if ratings_match else None
+                        break            
                 
                 
                 rows = product.select("div.a-row")
@@ -282,16 +256,16 @@ def save_to_csv(products, filename="amazon_products.csv"):
     
     return df
 
+
 if __name__ == "__main__":
-    # query = "smartphones"
     query = input("Query: ")
     url = f"https://www.amazon.com/"
     
-    # Uncomment to fetch fresh HTML
-    fetch_html(url, query, f"{query.replace(" ", "_")}.html" )
+    filename = f"{query.replace(' ', '_')}.html"
     
-    # Parse products
-    Products = parse_products(f"{query.replace(" ", "_")}.html")
+    # fetch_html(url, query, filename)   # ← uncomment this
+    
+    Products = parse_products(filename)  # ← pass same filename
     print(f"\n✅ Total products scraped: {len(Products)}")
     
     # # Save to CSV using pandas
@@ -303,3 +277,18 @@ if __name__ == "__main__":
     #     print(df['price_display'].describe())
     # else:
     #     print("❌ No products found to save!")
+
+
+
+
+# if __name__ == "__main__":
+#     # query = "smartphones"
+#     query = input("Query: ")
+#     url = f"https://www.amazon.com/"
+    
+#     # Uncomment to fetch fresh HTML
+#     # fetch_html(url, query, f"{query.replace(" ", "_")}.html" )
+    
+#     # Parse products
+#     Products = parse_products(f"{query.replace(" ", "_")}.html")
+#     print(f"\n✅ Total products scraped: {len(Products)}")
