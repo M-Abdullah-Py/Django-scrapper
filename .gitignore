@@ -1,5 +1,9 @@
 venv/
+.venv/
 __pycache__/
 *.pyc
 .env
+*.csv
+*.pyo
 scraper/ebay_scrape.py
+staticfiles/
